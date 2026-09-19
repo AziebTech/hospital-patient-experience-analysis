@@ -1,16 +1,15 @@
-# HCAHPS Hospital Patient Experience: Sentiment Analysis & NLP Classification
+# HCAHPS Hospital Patient Experience: Sentiment Analysis
 
-A data engineering and NLP project that turns the CMS HCAHPS national patient-experience survey into labeled sentiment data, state-level insights, and a supervised text-classification pipeline.
+A data engineering project that turns the CMS HCAHPS national patient-experience survey into labeled sentiment data and state-level insights, with statistical validation against CMS's own official ratings.
 
 ## Overview
 
 HCAHPS is the standardized U.S. survey CMS uses to capture patients' perspectives on hospital care: communication with doctors and nurses, cleanliness, quietness, discharge information, medication communication, and overall hospital ratings. The raw source data doesn't report this as a simple positive or negative label. It reports categorical answer descriptions (e.g., *"Nurses 'always' communicated well"*) alongside percentages, star ratings, and survey counts.
 
-This project turns that raw categorical data into something analyzable, and answers three questions:
+This project turns that raw categorical data into something analyzable, and answers two questions:
 
 1. **What sentiment does each survey answer category represent?** (positive / neutral / negative)
 2. **Where do patients report the most negative experiences,** in absolute terms, as a rate, and normalized per capita?
-3. **Can a supervised NLP model classify short patient-experience text** as positive or negative, as a decoupled proof-of-concept for a future free-text extension of this pipeline?
 
 ## Technical Approach
 
@@ -18,13 +17,10 @@ This project turns that raw categorical data into something analyzable, and answ
 HCAHPS answers are pre-categorized, not free text, so sentiment isn't inferred by a model here. It's derived from a manual mapping dictionary that classifies all ~70 unique HCAHPS answer descriptions into positive, negative, or neutral (aggregate metrics like linear mean scores and star ratings, which aren't sentiment-bearing on their own). Labels are encoded numerically (positive = 1, neutral = 0, negative = -1) for downstream aggregation.
 
 **2. Feature Engineering & Estimation**
-Cleans and casts numeric fields (answer percentages, completed survey counts, star ratings, response rates), then derives `estimated_responses = answer_percent * completed_surveys / 100` to approximate the number of patients behind each reported percentage. One-hot encodes answer descriptions and correlates them against survey metrics to validate which categories move together with rating and response-rate signals.
+Cleans and casts numeric fields (answer percentages, completed survey counts, star ratings, response rates), then derives `estimated_responses = answer_percent * completed_surveys / 100` to approximate the number of patients behind each reported percentage.
 
 **3. Geographic Rollup**
 Each HCAHPS survey batch answers ~18 distinct questions (nurse communication, doctor communication, cleanliness, quietness, discharge info, recommend-hospital, etc.), all sharing the same respondent base. Estimated responses are first aggregated **per question** (grouped by the underlying `HCAHPS Measure ID`, e.g. `H_COMP_1_A_P`/`H_COMP_1_SN_P`/`H_COMP_1_U_P` all roll up to `H_COMP_1`) so unrelated questions are never summed together, which would otherwise inflate counts by ~18x and blend dissimilar sentiment dimensions into one meaningless number. The full per-question, per-state breakdown is saved for granular analysis, and a single well-defined, mutually-exclusive question — "would recommend the hospital" (`H_RECMND`) — is used as the headline, apples-to-apples state comparison. That headline metric is then joined against a state/territory population reference table (all 50 states, DC, and PR/VI/GU/AS/MP) to normalize per million residents rather than ranking by raw volume, which would just reflect population size. The pipeline explicitly checks the correlation between negative response volume and state population to surface that bias, and flags any states with missing population data for transparency.
-
-**4. Supervised NLP Classification (Decoupled Proof-of-Concept)**
-HCAHPS itself has no free-text field, so this piece does not run on HCAHPS data. It's a separate, minimal end-to-end classification pipeline trained on `exampledataset2.csv`, a small set of 50 hand-written, hospital-review-style sentences (not real patient records) built to demonstrate how free-text patient feedback could be classified if it existed in the source data. It uses CountVectorizer (Bag-of-Words) for vectorization and an SVM classifier from scikit-learn, evaluated with stratified 5-fold cross-validation (accuracy, precision, recall, F1 reported as mean ± std across folds) rather than a single train/test split, since the labeled dataset is small. Intentionally simple and swappable, built as a clear extension point for TF-IDF, word embeddings, or transformer-based models, and for real patient-comment data if it becomes available.
 
 ## Key Findings (Visualized)
 
@@ -59,8 +55,6 @@ This project measures **patient-reported experience** during a hospital stay (co
 | `hcahps_utils.py` | Shared, unit-testable logic (measure-group derivation, response estimation, state aggregation, population join) used by the pipeline |
 | `test_hcahps_utils.py` | Automated tests for `hcahps_utils.py` (run with `python -m unittest test_hcahps_utils.py -v`) |
 | `hcahps_visualization.py` | Generates the charts in `visuals/` from the state-level CSV outputs |
-| `nlp_sentiment_analysis.py` | Standalone, decoupled proof-of-concept text classifier (Bag-of-Words + SVM), not run on HCAHPS data |
-| `exampledataset2.csv` | 50 hand-written, hospital-review-style example sentences used to train/evaluate the standalone classifier (synthetic, not real patient records) |
 | `HCAHPS-Hospital-sentiment.csv` | Output: full dataset enriched with sentiment labels, numeric encodings, and estimated response counts |
 | `HCAHPS-Hospital-state-negative-by-measure.csv` | Output: negative-rate breakdown by state **and** individual HCAHPS question (no cross-question blending) |
 | `HCAHPS-Hospital-state-negative-summary.csv` | Output: headline state-level rollup based on the "recommend hospital" question only, with per-million-population normalization and a validation column against CMS's own official Summary Star Rating |
@@ -72,11 +66,10 @@ This project measures **patient-reported experience** during a hospital stay (co
 - **Domain-driven labeling:** converting a categorical survey taxonomy into ML-ready sentiment labels without manual text annotation
 - **End-to-end pipeline thinking:** raw ingestion, cleaning, feature engineering, statistical aggregation, geographic normalization, and exportable analytical outputs
 - **Statistical rigor:** normalizing by population instead of raw counts, and explicitly testing for a known analytical bias before trusting the results
-- **Applied NLP:** a working supervised text classifier built as a decoupled, extensible proof-of-concept, not a black box
 
 ## Tech Stack
 
-Python, pandas, scikit-learn (CountVectorizer, SVC, StratifiedKFold, accuracy_score, precision_score, recall_score, f1_score), matplotlib
+Python, pandas, matplotlib
 
 ## Setup & Reproducibility
 
@@ -90,7 +83,6 @@ pip install -r requirements.txt
 2. `python hcahps_sentiment_analysis.py` — runs the core pipeline and writes the CSV outputs.
 3. `python hcahps_visualization.py` — generates the charts in `visuals/` from those outputs.
 4. `python -m unittest test_hcahps_utils.py -v` — runs the unit test suite (does not require the raw CSV).
-5. `python nlp_sentiment_analysis.py` — runs the standalone NLP proof-of-concept (uses `exampledataset2.csv`, included in the repo).
 
 ## Data Source
 
@@ -100,7 +92,6 @@ Source data is the public CMS (Centers for Medicare & Medicaid Services) "Patien
 
 - **Suppressed data:** ~41% of raw `HCAHPS Answer Percent` values are CMS-suppressed (`"Not Applicable"` or `"Not Available"`, typically small-sample facilities) and are excluded from aggregates via coercion to `NaN`. Roughly 87k rows also carry a CMS data-quality footnote that isn't currently surfaced in the outputs.
 - **Population figures are sourced and cited:** the 50 states, DC, and Puerto Rico use U.S. Census Bureau Vintage 2025 postcensal estimates (as of July 1, 2025, NST-EST2025-POP). Guam, the U.S. Virgin Islands, American Samoa, and the Northern Mariana Islands aren't part of that annual program, so they use the 2020 Decennial Census island-area counts instead — both sources are cited directly above `state_population_map` in `hcahps_sentiment_analysis.py`.
-- **NLP classifier accuracy still carries wide uncertainty:** `exampledataset2.csv` has only 50 rows. Stratified 5-fold cross-validation now reports accuracy as 0.580 ± 0.117 (individual folds ranged 0.40–0.70), which is a far more honest picture than a single 80/20 split — but the dataset is still too small to treat any of these numbers as production-grade. Grow the labeled dataset before presenting a headline accuracy figure.
 - **Correlation between state population and negative response volume is expected to be high** (larger states simply have more hospitals and respondents); this is why the headline metric is normalized per million residents rather than presented as a raw count.
 
 ## Testing
@@ -115,7 +106,6 @@ python -m unittest test_hcahps_utils.py -v
 
 - Replace the manual sentiment dictionary with a validated lookup table or automated tests to catch silent mismatches as CMS updates category wording
 - Refresh the state population figures on a yearly cadence as new Census Bureau vintages are released
-- Upgrade the NLP classifier to TF-IDF plus logistic regression or transformer embeddings, trained on a larger labeled dataset to narrow the cross-validation confidence interval
 - Containerize the pipeline (Docker) and orchestrate scheduled CMS data refreshes with a workflow tool (Airflow or Prefect)
 
 ## License
