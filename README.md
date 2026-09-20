@@ -26,11 +26,11 @@ Each HCAHPS survey batch answers ~18 distinct questions (nurse communication, do
 
 !["Would not recommend" rate by state, sorted from best to worst](visuals/state_negative_rate.png)
 
-Puerto Rico, DC, and Arizona have the highest share of patients who would not recommend their hospital; South Dakota, Minnesota, and Idaho have the lowest. This uses a single, apples-to-apples HCAHPS question so states are never compared across blended, unrelated measures.
+Among states and territories with a meaningful sample, Puerto Rico, DC, and Arizona have the highest share of patients who would not recommend their hospital; South Dakota, Minnesota, and Idaho have the lowest. (The U.S. Virgin Islands technically ranks highest at 11%, but on roughly 200 estimated responses, too few to compare fairly against states with thousands.) This uses a single, apples-to-apples HCAHPS question so states are never compared across blended, unrelated measures.
 
 ![National negative rate by HCAHPS question](visuals/national_negative_rate_by_measure.png)
 
-Not all HCAHPS dimensions are equally negative nationally: medication side-effect communication (32%) and pre-medication communication (21%) are the weakest-performing measures by far, while nurse and doctor courtesy/respect are consistently strong (3-4%). This is exactly why the state ranking above uses one specific measure instead of summing every question together.
+Not all HCAHPS dimensions are equally negative nationally. The figures below are negative-response rates, meaning the share of patients who answered "sometimes" or "never" rather than "always" or "usually": medication side-effect communication has a 32% negative rate and pre-medication communication a 21% negative rate, making them the weakest-performing measures by far, while nurse and doctor courtesy/respect are consistently strong with only a 3-4% negative rate. This is exactly why the state ranking above uses one specific measure instead of summing every question together.
 
 ![Why per-capita normalization matters: population vs. raw count and per-capita rate](visuals/population_bias_check.png)
 
