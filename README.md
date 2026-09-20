@@ -1,4 +1,4 @@
-# HCAHPS Hospital Patient Experience: Sentiment Analysis
+# Hospital Patient Experience Analysis (CMS HCAHPS)
 
 A data engineering project that turns the CMS HCAHPS national patient-experience survey into labeled sentiment data and state-level insights, with statistical validation against CMS's own official ratings.
 
